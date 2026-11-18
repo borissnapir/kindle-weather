@@ -195,10 +195,23 @@ def render(data, out):
 
     y = M
 
+    # ── Shared chart setup ────────────────────────────────────────────
+    Y_LBL   = 58
+    chart_h = 108
+    bw      = (W - 2*M - Y_LBL) // 24
+    cx0     = M + Y_LBL
+    today   = daily["time"][0]
+    try:
+        idx0 = hourly["time"].index(f"{today}T00:00")
+    except ValueError:
+        idx0 = 0
+    probs  = hourly["precipitation_probability"]
+    precip = hourly.get("precipitation", [])
+
     # ── Header ────────────────────────────────────────────────────────
-    now_utc = datetime.now(ZoneInfo(TZ)).strftime("%a %d %b  %H:%M")
-    draw.text((M, y),       LOCATION, font=f_m, fill=0)
-    draw.text((W-M, y+8),   now_utc,  font=f_xs, fill=80, anchor="ra")
+    now_local = datetime.now(ZoneInfo(TZ)).strftime("%a %d %b  %H:%M")
+    draw.text((M, y),     LOCATION,  font=f_m,  fill=0)
+    draw.text((W-M, y+8), now_local, font=f_xs, fill=80, anchor="ra")
     y += 68
     draw.line([(M, y), (W-M, y)], fill=0, width=3)
     y += 28
@@ -210,32 +223,82 @@ def render(data, out):
     wind = cur["wind_speed_10m"]
     code = cur["weather_code"]
 
-    # Temperature (left)
     draw.text((M, y), f"{temp:.0f}", font=f_xl, fill=0)
     bbox = draw.textbbox((M, y), f"{temp:.0f}", font=f_xl)
     draw.text((bbox[2]+6, y+16), "\u00b0C", font=f_l, fill=0)
 
-    # Icon (centre)
     icon_size = 220
-    icon_cx   = W // 2 + 20
-    icon_cy   = y + icon_size // 2 + 10
-    draw_icon(draw, icon_cx, icon_cy, icon_size, code)
+    draw_icon(draw, W//2 + 20, y + icon_size//2 + 10, icon_size, code)
 
-    # Details (right)
     rx = W - M
-    draw.text((rx, y),       wmo(code),                    font=f_m, fill=0,  anchor="ra")
-    draw.text((rx, y + 68),  f"Feels: {feel:.0f}\u00b0C",  font=f_s, fill=70, anchor="ra")
-    draw.text((rx, y + 118), f"Humidity: {hum:.0f}%",      font=f_s, fill=70, anchor="ra")
-    draw.text((rx, y + 168), f"Wind: {wind:.0f} km/h",     font=f_s, fill=70, anchor="ra")
+    draw.text((rx, y),       wmo(code),                   font=f_m, fill=0,  anchor="ra")
+    draw.text((rx, y + 68),  f"Feels: {feel:.0f}\u00b0C", font=f_s, fill=70, anchor="ra")
+    draw.text((rx, y + 118), f"Humidity: {hum:.0f}%",     font=f_s, fill=70, anchor="ra")
+    draw.text((rx, y + 168), f"Wind: {wind:.0f} km/h",    font=f_s, fill=70, anchor="ra")
 
     y += icon_size + 24
 
-    # Sunrise / sunset
     sr = daily["sunrise"][0].split("T")[1][:5]
     ss = daily["sunset"][0].split("T")[1][:5]
     draw.text((M, y), f"\u2191 {sr}   \u2193 {ss}", font=f_s, fill=70)
     y += 58
 
+    draw.line([(M, y), (W-M, y)], fill=0, width=3)
+    y += 32
+
+    # ── Chart 1: rainfall mm ──────────────────────────────────────────
+    draw.text((M, y), "Rainfall \u2014 next 24h (mm)", font=f_m, fill=0)
+    y += 60
+
+    rain_24 = [precip[idx0+h] if (idx0+h) < len(precip) else 0.0 for h in range(24)]
+    raw_max = max(rain_24) if rain_24 else 0.0
+    if   raw_max <= 0:   scale_mm = 1.0
+    elif raw_max <= 1:   scale_mm = 1.0
+    elif raw_max <= 2:   scale_mm = 2.0
+    elif raw_max <= 5:   scale_mm = 5.0
+    elif raw_max <= 10:  scale_mm = 10.0
+    else:                scale_mm = math.ceil(raw_max / 5) * 5.0
+
+    for frac, label in [(0, "0"), (0.5, f"{scale_mm/2:.1f}"), (1.0, f"{scale_mm:.0f}mm")]:
+        yy = y + chart_h - int(chart_h * frac)
+        draw.text((cx0 - 6, yy), label, font=f_xs, fill=80, anchor="rm")
+        if frac == 0.5:
+            draw.line([(cx0, yy), (W-M, yy)], fill=210, width=1)
+
+    for h in range(24):
+        mm = rain_24[h]
+        bh = min(chart_h, int(chart_h * mm / scale_mm)) if scale_mm > 0 else 0
+        bx = cx0 + h * bw
+        if bh > 0:
+            draw.rectangle([bx+1, y+chart_h-bh, bx+bw-1, y+chart_h], fill=0)
+        if h % 6 == 0:
+            draw.text((bx + bw//2, y+chart_h+5), f"{h:02d}h",
+                      font=f_xs, fill=0, anchor="mt")
+
+    y += chart_h + 44
+    draw.line([(M, y), (W-M, y)], fill=180, width=1)
+    y += 24
+
+    # ── Chart 2: precipitation probability ───────────────────────────
+    draw.text((M, y), "Precipitation probability \u2014 next 24h", font=f_m, fill=0)
+    y += 60
+
+    for pct, label in [(0, "0%"), (50, "50%"), (100, "100%")]:
+        yy = y + chart_h - int(chart_h * pct / 100)
+        draw.text((cx0 - 6, yy), label, font=f_xs, fill=80, anchor="rm")
+        if pct == 50:
+            draw.line([(cx0, yy), (W-M, yy)], fill=210, width=1)
+
+    for h in range(24):
+        p  = probs[idx0+h] if (idx0+h) < len(probs) else 0
+        bh = int(chart_h * p / 100)
+        bx = cx0 + h * bw
+        draw.rectangle([bx+1, y+chart_h-bh, bx+bw-1, y+chart_h], fill=0)
+        if h % 6 == 0:
+            draw.text((bx + bw//2, y+chart_h+5), f"{h:02d}h",
+                      font=f_xs, fill=0, anchor="mt")
+
+    y += chart_h + 44
     draw.line([(M, y), (W-M, y)], fill=0, width=3)
     y += 32
 
@@ -247,24 +310,21 @@ def render(data, out):
     col = (W - 2*M) // n
 
     for i in range(n):
-        cx   = M + i*col + col//2
+        fcx  = M + i*col + col//2
         date = datetime.fromisoformat(daily["time"][i])
         lbl  = "Today" if i == 0 else date.strftime("%a %d")
         hi   = daily["temperature_2m_max"][i]
         lo   = daily["temperature_2m_min"][i]
         prob = daily["precipitation_probability_max"][i] or 0
         dc   = daily["weather_code"][i]
-
-        draw.text((cx, y),      lbl,                  font=f_s,  fill=0,   anchor="mt")
-
-        # Small icon
         ico_sz = int(col * 0.60)
-        draw_icon(draw, cx, y + 48 + ico_sz//2, ico_sz, dc)
 
-        draw.text((cx, y + 48 + ico_sz + 4),  wmo(dc),              font=f_xs, fill=80,  anchor="mt")
-        draw.text((cx, y + 48 + ico_sz + 36), f"{hi:.0f}\u00b0",  font=f_m, fill=0,   anchor="mt")
-        draw.text((cx, y + 48 + ico_sz + 100), f"{lo:.0f}\u00b0", font=f_s, fill=100, anchor="mt")
-        draw.text((cx, y + 48 + ico_sz + 148), f"P:{prob:.0f}%",  font=f_xs, fill=80, anchor="mt")
+        draw.text((fcx, y),                        lbl,              font=f_s,  fill=0,   anchor="mt")
+        draw_icon(draw, fcx, y + 48 + ico_sz//2, ico_sz, dc)
+        draw.text((fcx, y + 48 + ico_sz + 4),   wmo(dc),            font=f_xs, fill=80,  anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 36),  f"{hi:.0f}\u00b0", font=f_m,  fill=0,   anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 100), f"{lo:.0f}\u00b0", font=f_s,  fill=100, anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 148), f"P:{prob:.0f}%",   font=f_xs, fill=80,  anchor="mt")
 
         if i < n-1:
             sx = M + (i+1)*col
@@ -272,82 +332,8 @@ def render(data, out):
 
     y += 48 + ico_sz + 198
     draw.line([(M, y), (W-M, y)], fill=0, width=3)
-    y += 32
+    y += 18
 
-    # ── Charts ────────────────────────────────────────────────────────
-    Y_LBL   = 58     # width for y-axis labels
-    chart_h = 108
-    bw      = (W - 2*M - Y_LBL) // 24   # bar width
-    cx0     = M + Y_LBL                  # bars start x
-
-    today = daily["time"][0]
-    try:
-        idx0 = hourly["time"].index(f"{today}T00:00")
-    except ValueError:
-        idx0 = 0
-
-    probs  = hourly["precipitation_probability"]
-    precip = hourly.get("precipitation", [])
-
-    # ── Chart 1: precipitation probability ───────────────────────────
-    draw.text((M, y), "Precipitation probability — next 24h", font=f_s, fill=0)
-    y += 52
-
-    # Y-axis labels + reference lines
-    for pct, label in [(0, "0%"), (50, "50%"), (100, "100%")]:
-        yy = y + chart_h - int(chart_h * pct / 100)
-        draw.text((cx0 - 6, yy), label, font=f_xs, fill=80, anchor="rm")
-        if pct == 50:
-            draw.line([(cx0, yy), (W-M, yy)], fill=210, width=1)
-
-    # Bars
-    for h in range(24):
-        p  = probs[idx0+h] if (idx0+h) < len(probs) else 0
-        bh = int(chart_h * p / 100)
-        bx = cx0 + h * bw
-        draw.rectangle([bx+1, y+chart_h-bh, bx+bw-1, y+chart_h], fill=0)
-        if h % 6 == 0:
-            draw.text((bx + bw//2, y+chart_h+5), f"{h:02d}h",
-                      font=f_xs, fill=0, anchor="mt")
-
-    y += chart_h + 44
-    draw.line([(M, y), (W-M, y)], fill=180, width=1)
-    y += 24
-
-    # ── Chart 2: rainfall mm ─────────────────────────────────────────
-    draw.text((M, y), "Rainfall — next 24h (mm)", font=f_s, fill=0)
-    y += 52
-
-    rain_24 = [precip[idx0+h] if (idx0+h) < len(precip) else 0.0 for h in range(24)]
-    raw_max = max(rain_24) if rain_24 else 0.0
-
-    # Round scale_mm up to a sensible ceiling
-    if   raw_max <= 0:   scale_mm = 1.0
-    elif raw_max <= 1:   scale_mm = 1.0
-    elif raw_max <= 2:   scale_mm = 2.0
-    elif raw_max <= 5:   scale_mm = 5.0
-    elif raw_max <= 10:  scale_mm = 10.0
-    else:                scale_mm = math.ceil(raw_max / 5) * 5.0
-
-    # Y-axis labels + reference lines
-    for frac, label in [(0, "0"), (0.5, f"{scale_mm/2:.1f}"), (1.0, f"{scale_mm:.0f}mm")]:
-        yy = y + chart_h - int(chart_h * frac)
-        draw.text((cx0 - 6, yy), label, font=f_xs, fill=80, anchor="rm")
-        if frac == 0.5:
-            draw.line([(cx0, yy), (W-M, yy)], fill=210, width=1)
-
-    # Bars
-    for h in range(24):
-        mm = rain_24[h]
-        bh = min(chart_h, int(chart_h * mm / scale_mm)) if scale_mm > 0 else 0
-        bx = cx0 + h * bw
-        if bh > 0:
-            draw.rectangle([bx+1, y+chart_h-bh, bx+bw-1, y+chart_h], fill=0)
-        if h % 6 == 0:
-            draw.text((bx + bw//2, y+chart_h+5), f"{h:02d}h",
-                      font=f_xs, fill=0, anchor="mt")
-
-    y += chart_h + 46
     # ── Attribution ───────────────────────────────────────────────────
     draw.text((W//2, y),
               "Open-Meteo / MeteoSwiss ICON CH2  (CC BY 4.0)",
@@ -355,7 +341,6 @@ def render(data, out):
 
     img.save(out, "PNG")
     print(f"Saved {out}  ({W}x{H})")
-
 
 if __name__ == "__main__":
     out_path = sys.argv[1] if len(sys.argv) > 1 else "weather.png"
