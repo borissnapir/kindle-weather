@@ -248,7 +248,7 @@ def render(data, out):
 
     # ── Chart 1: rainfall mm ──────────────────────────────────────────
     draw.text((M, y), "Rainfall \u2014 next 24h (mm)", font=f_m, fill=0)
-    y += 60
+    y += 80
 
     rain_24 = [precip[idx0+h] if (idx0+h) < len(precip) else 0.0 for h in range(24)]
     raw_max = max(rain_24) if rain_24 else 0.0
@@ -281,7 +281,7 @@ def render(data, out):
 
     # ── Chart 2: precipitation probability ───────────────────────────
     draw.text((M, y), "Precipitation probability \u2014 next 24h", font=f_m, fill=0)
-    y += 60
+    y += 80
 
     for pct, label in [(0, "0%"), (50, "50%"), (100, "100%")]:
         yy = y + chart_h - int(chart_h * pct / 100)
