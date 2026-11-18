@@ -150,25 +150,33 @@ def draw_icon(draw, cx, cy, size, code):
 # ── Open-Meteo fetch ──────────────────────────────────────────────────
 
 def fetch():
-    r = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params={
-            "latitude": LAT, "longitude": LON,
-            "current": ["temperature_2m", "apparent_temperature",
-                        "weather_code", "wind_speed_10m",
-                        "relative_humidity_2m"],
-            "daily": ["weather_code", "temperature_2m_max",
-                      "temperature_2m_min", "precipitation_probability_max",
-                      "sunrise", "sunset"],
-            "hourly": ["precipitation_probability", "precipitation"],
-            "models": "meteoswiss_icon_ch2",
-            "timezone": TZ,
-            "forecast_days": 5,
-        },
-        timeout=15,
-    )
-    r.raise_for_status()
-    return r.json()
+    params = {
+        "latitude": LAT, "longitude": LON,
+        "current": ["temperature_2m", "apparent_temperature",
+                    "weather_code", "wind_speed_10m",
+                    "relative_humidity_2m"],
+        "daily": ["weather_code", "temperature_2m_max",
+                  "temperature_2m_min", "precipitation_probability_max",
+                  "sunrise", "sunset"],
+        "hourly": ["precipitation_probability", "precipitation"],
+        "models": "meteoswiss_icon_ch2",
+        "timezone": TZ,
+        "forecast_days": 5,
+    }
+    for attempt in range(3):
+        try:
+            r = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params=params,
+                timeout=30,
+            )
+            r.raise_for_status()
+            return r.json()
+        except requests.exceptions.RequestException as e:
+            if attempt == 2:
+                raise
+            print(f"Attempt {attempt + 1} failed: {e} — retrying...")
+            import time; time.sleep(5)
 
 # ── Render ────────────────────────────────────────────────────────────
 
