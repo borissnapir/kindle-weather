@@ -260,7 +260,8 @@ def render(data, out):
         ico_sz = int(col * 0.60)
         draw_icon(draw, cx, y + 48 + ico_sz//2, ico_sz, dc)
 
-        draw.text((cx, y + 48 + ico_sz + 8),  f"{hi:.0f}\u00b0",  font=f_m, fill=0,   anchor="mt")
+        draw.text((cx, y + 48 + ico_sz + 4),  wmo(dc),              font=f_xs, fill=80,  anchor="mt")
+        draw.text((cx, y + 48 + ico_sz + 36), f"{hi:.0f}\u00b0",  font=f_m, fill=0,   anchor="mt")
         draw.text((cx, y + 48 + ico_sz + 68), f"{lo:.0f}\u00b0",  font=f_s, fill=100, anchor="mt")
         draw.text((cx, y + 48 + ico_sz + 112),f"P:{prob:.0f}%",   font=f_xs,fill=80,  anchor="mt")
 
