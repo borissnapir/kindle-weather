@@ -6,6 +6,7 @@ Data: Open-Meteo (MeteoSwiss ICON CH2) — free, no API key.
 import sys
 import math
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
@@ -195,7 +196,7 @@ def render(data, out):
     y = M
 
     # ── Header ────────────────────────────────────────────────────────
-    now_utc = datetime.now(timezone.utc).strftime("%a %d %b  %H:%M UTC")
+    now_utc = datetime.now(ZoneInfo(TZ)).strftime("%a %d %b  %H:%M")
     draw.text((M, y),       LOCATION, font=f_m, fill=0)
     draw.text((W-M, y+8),   now_utc,  font=f_xs, fill=80, anchor="ra")
     y += 68
@@ -262,14 +263,14 @@ def render(data, out):
 
         draw.text((cx, y + 48 + ico_sz + 4),  wmo(dc),              font=f_xs, fill=80,  anchor="mt")
         draw.text((cx, y + 48 + ico_sz + 36), f"{hi:.0f}\u00b0",  font=f_m, fill=0,   anchor="mt")
-        draw.text((cx, y + 48 + ico_sz + 68), f"{lo:.0f}\u00b0",  font=f_s, fill=100, anchor="mt")
-        draw.text((cx, y + 48 + ico_sz + 112),f"P:{prob:.0f}%",   font=f_xs,fill=80,  anchor="mt")
+        draw.text((cx, y + 48 + ico_sz + 100), f"{lo:.0f}\u00b0", font=f_s, fill=100, anchor="mt")
+        draw.text((cx, y + 48 + ico_sz + 148), f"P:{prob:.0f}%",  font=f_xs, fill=80, anchor="mt")
 
         if i < n-1:
             sx = M + (i+1)*col
-            draw.line([(sx, y), (sx, y + 48 + ico_sz + 148)], fill=180, width=1)
+            draw.line([(sx, y), (sx, y + 48 + ico_sz + 184)], fill=180, width=1)
 
-    y += 48 + ico_sz + 162
+    y += 48 + ico_sz + 198
     draw.line([(M, y), (W-M, y)], fill=0, width=3)
     y += 32
 
