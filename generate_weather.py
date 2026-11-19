@@ -255,7 +255,7 @@ def render(data, out):
     y += 32
 
     # ── Chart 1: rainfall mm ──────────────────────────────────────────
-    draw.text((M, y), "Rainfall \u2014 next 24h (mm)", font=f_m, fill=0)
+    draw.text((M, y), "Rainfall \u2014 next 24h", font=f_m, fill=0)
     y += 80
 
     rain_24 = [precip[idx0+h] if (idx0+h) < len(precip) else 0.0 for h in range(24)]
@@ -270,7 +270,7 @@ def render(data, out):
     for frac, label in [(0, "0"), (0.5, f"{scale_mm/2:.1f}"), (1.0, f"{scale_mm:.0f}mm")]:
         yy = y + chart_h - int(chart_h * frac)
         draw.text((cx0 - 6, yy), label, font=f_xs, fill=80, anchor="rm")
-        if frac == 0.5:
+        if frac in (0.5, 1.0):
             draw.line([(cx0, yy), (W-M, yy)], fill=210, width=1)
 
     for h in range(24):
@@ -294,7 +294,7 @@ def render(data, out):
     for pct, label in [(0, "0%"), (50, "50%"), (100, "100%")]:
         yy = y + chart_h - int(chart_h * pct / 100)
         draw.text((cx0 - 6, yy), label, font=f_xs, fill=80, anchor="rm")
-        if pct == 50:
+        if pct in (50, 100):
             draw.line([(cx0, yy), (W-M, yy)], fill=210, width=1)
 
     for h in range(24):
@@ -339,13 +339,6 @@ def render(data, out):
             draw.line([(sx, y), (sx, y + 48 + ico_sz + 184)], fill=180, width=1)
 
     y += 48 + ico_sz + 198
-    draw.line([(M, y), (W-M, y)], fill=0, width=3)
-    y += 18
-
-    # ── Attribution ───────────────────────────────────────────────────
-    draw.text((W//2, y),
-              "Open-Meteo / MeteoSwiss ICON CH2  (CC BY 4.0)",
-              font=f_xs, fill=120, anchor="mt")
 
     img.save(out, "PNG")
     print(f"Saved {out}  ({W}x{H})")
