@@ -321,10 +321,10 @@ def render(data, out):
         fcx  = M + i*col + col//2
         date = datetime.fromisoformat(daily["time"][i])
         lbl  = "Today" if i == 0 else date.strftime("%a %d")
-        hi   = daily["temperature_2m_max"][i]
-        lo   = daily["temperature_2m_min"][i]
+        hi   = daily["temperature_2m_max"][i] or 0
+        lo   = daily["temperature_2m_min"][i] or 0
         prob = daily["precipitation_probability_max"][i] or 0
-        dc   = daily["weather_code"][i]
+        dc   = daily["weather_code"][i] or 0
         ico_sz = int(col * 0.60)
 
         draw.text((fcx, y),                        lbl,              font=f_s,  fill=0,   anchor="mt")
