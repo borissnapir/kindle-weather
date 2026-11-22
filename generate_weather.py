@@ -321,18 +321,21 @@ def render(data, out):
         fcx  = M + i*col + col//2
         date = datetime.fromisoformat(daily["time"][i])
         lbl  = "Today" if i == 0 else date.strftime("%a %d")
-        hi   = daily["temperature_2m_max"][i] or 0
-        lo   = daily["temperature_2m_min"][i] or 0
-        prob = daily["precipitation_probability_max"][i] or 0
+        hi   = daily["temperature_2m_max"][i]
+        lo   = daily["temperature_2m_min"][i]
+        prob = daily["precipitation_probability_max"][i]
         dc   = daily["weather_code"][i] or 0
         ico_sz = int(col * 0.60)
+        hi_str   = f"{hi:.0f}\u00b0"  if hi   is not None else "null"
+        lo_str   = f"{lo:.0f}\u00b0"  if lo   is not None else "null"
+        prob_str = f"P:{prob:.0f}%"    if prob is not None else "P:null"
 
-        draw.text((fcx, y),                        lbl,              font=f_s,  fill=0,   anchor="mt")
+        draw.text((fcx, y),                        lbl,      font=f_s,  fill=0,   anchor="mt")
         draw_icon(draw, fcx, y + 48 + ico_sz//2, ico_sz, dc)
-        draw.text((fcx, y + 48 + ico_sz + 4),   wmo(dc),            font=f_xs, fill=80,  anchor="mt")
-        draw.text((fcx, y + 48 + ico_sz + 36),  f"{hi:.0f}\u00b0", font=f_m,  fill=0,   anchor="mt")
-        draw.text((fcx, y + 48 + ico_sz + 100), f"{lo:.0f}\u00b0", font=f_s,  fill=100, anchor="mt")
-        draw.text((fcx, y + 48 + ico_sz + 148), f"P:{prob:.0f}%",   font=f_xs, fill=80,  anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 4),   wmo(dc),    font=f_xs, fill=80,  anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 36),  hi_str,     font=f_m,  fill=0,   anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 100), lo_str,     font=f_s,  fill=100, anchor="mt")
+        draw.text((fcx, y + 48 + ico_sz + 148), prob_str,   font=f_xs, fill=80,  anchor="mt")
 
         if i < n-1:
             sx = M + (i+1)*col
