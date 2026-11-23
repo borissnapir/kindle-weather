@@ -163,20 +163,22 @@ def fetch():
         "timezone": TZ,
         "forecast_days": 5,
     }
-    for attempt in range(3):
+    import time
+    for attempt in range(5):
         try:
             r = requests.get(
                 "https://api.open-meteo.com/v1/forecast",
                 params=params,
-                timeout=30,
+                timeout=(10, 60),  # 10s connect, 60s read
             )
             r.raise_for_status()
             return r.json()
         except requests.exceptions.RequestException as e:
-            if attempt == 2:
+            if attempt == 4:
                 raise
-            print(f"Attempt {attempt + 1} failed: {e} — retrying...")
-            import time; time.sleep(5)
+            wait = 10 * (attempt + 1)  # 10s, 20s, 30s, 40s
+            print(f"Attempt {attempt + 1} failed: {e} — retrying in {wait}s...")
+            time.sleep(wait)
 
 # ── Render ────────────────────────────────────────────────────────────
 
